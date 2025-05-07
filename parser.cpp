@@ -30,40 +30,51 @@ struct Token {
 
 Token currentToken; // Current token being processed
 
-// -----------------------------     Store in Token Vector      -------------------------------
+// -------------------------------------- SYMBOL TABLE -----------------------------------
+enum enumType { 
+    typeInt, typeFloat
+};
 
-// vector<Token> tokens; // Vector to store tokens
-// int tokenIndex = 0; // Index of the current token being processed
+struct Symbol {
+    string name;
+    enumType type;
+    string value;
+    int lineDeclared;
+};
 
-/*
-extern "C" void addToken(int type, const char *value, int line) {
-    // Assume tokens is your global C++ vector<Token> from your parser.
-    tokens.push_back(Token((TokenType)type, std::string(value), line));
+unordered_map<string, Symbol> symbolTable;
+
+void printSymbolTable() {
+    cout << "\nSymbol Table:\n";
+    for (const auto& [name, sym] : symbolTable) {
+        cout << "Name: " << name << ", Type: " << sym.type << ", Value: " << sym.value << ", Declared at line: " << sym.lineDeclared << endl;
+    }
 }
-*/
+
+void declareVariable(const string& name, enumType type, const string& value, int line) {
+    if (symbolTable.count(name)) {
+        cerr << "Semantic Error: Variable '" << name << "' already declared (line " << line << ")." << endl;
+        exit(1);
+    }
+    Symbol sym = { name, type, value, line };
+    symbolTable[name] = sym;
+}
+
+Symbol& getVariable(const string& name, int line) {
+    if (!symbolTable.count(name)) {
+        cerr << "Semantic Error: Variable '" << name << "' used before declaration (line " << line << ")." << endl;
+        exit(1);
+    }
+    return symbolTable[name];
+}
+// -------------------------------------- ^^^ SYMBOL TABLE ^^^ -----------------------------------
+
 
 // this returns the next token from the tokens vector.
 Token getToken() {
-    /*
-    if (tokenIndex < tokens.size()) {
-        // currentToken = tokens[tokenIndex];
-        int currIdx = tokenIndex;
-        tokenIndex++;
-        return tokens[currIdx];
-    } else {
-        return Token(UNKNOWN, "", -1); // Return an empty token if out of bounds
-    }
-    */
-
     int tokenType = yylex(); // Get next token from lexer
-    // if (tokenType == -1) {
-    //     return Token(UNKNOWN, "", -1);
-    // }
-    // Assuming the scanner provides a way to get token value and line
     return Token((TokenType)tokenType, yytext, yylineno); // Set the value and line properly if needed
 }
-
-// ---------------------------------------------------------------------------------------------
 
 void error(const char* message) {
     cerr << "Syntax error at line " << currentToken.line
@@ -73,18 +84,6 @@ void error(const char* message) {
 }
 
 void match(TokenType expected) {
-
-    /* CHECK NEXT TOKEN IN TOKEN ARRAY
-    if (currentToken.type == expected) {
-        currentToken = getToken();
-    } else {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "Expected token type %s but found %s",
-                 tokenTypeNames[expected], tokenTypeNames[currentToken.type]);
-        error(msg);
-    }
-    */
-
     if (currentToken.type == expected) {
         currentToken = getToken();
     } 
@@ -94,8 +93,9 @@ void match(TokenType expected) {
                  tokenTypeNames[expected], tokenTypeNames[currentToken.type]);
         error(msg);
     }
-
 }
+
+// ------------------------------- RULES ----------------------------------------------
 
 void program(); 
 void declaration_list();
@@ -103,7 +103,7 @@ void declaration_list_tail();
 void declaration();
 void var_declaration();
 void var_declaration_tail();
-void type_specifier();
+enumType type_specifier();
 void params();
 void param_list();
 void param_list_tail();
@@ -117,26 +117,23 @@ void assignment_stmt();
 void selection_stmt();
 void selection_stmt_tail();
 void iteration_stmt();
-void var();
+Symbol var();
 void var_tail();
-void expression();
-void expression_tail();
+Symbol expression();
+Symbol expression_tail(Symbol term1);
 void relop();
-void additive_expression();
-void additive_expression_tail();
+Symbol additive_expression();
+Symbol additive_expression_tail(Symbol term1);
 void addop();
-void term();
-void term_tail();
+Symbol term();
+Symbol term_tail(Symbol term);
 void mulop();
-void factor();
+Symbol factor();
 
 
-void program() {
-    // if (currentToken.type == PROGRAM) {
-    //     match(PROGRAM);
-    // } else {
-    //     error("Expected 'Program' keyword");
-    // }
+void program() // 1 - program -> Program ID {declaration-list statement-list}.
+{
+
     match(PROGRAM);
     
     match(ID); 
@@ -149,32 +146,43 @@ void program() {
     match(DOT);
 }
 
-void declaration_list() {
+void declaration_list() // 2.1 - declaration-list -> declaration declaration-list-tail
+{
     declaration();
     declaration_list_tail();
 }
 
-void declaration_list_tail() {
+void declaration_list_tail() // 2.2 - declaration-list-tail -> declaration declaration-list-tail | ε
+{
     if (currentToken.type == INT || currentToken.type == FLOAT) {
         declaration();
         declaration_list_tail();
     }
 }
 
-void declaration() {
+void declaration() // 3 - declaration -> var-declaration
+{
     var_declaration();
 }
 
-void var_declaration() {
-    type_specifier();
+void var_declaration() // 4.1 - var-declaration -> type-specifier ID var-declaration-tail
+{
+    // get type of variable
+    enumType varType;
+    varType = type_specifier();
+
+    string varName = currentToken.value;
+    declareVariable(varName, varType, "", currentToken.line);
     match(ID);
+
     var_declaration_tail();
 }
 
-void var_declaration_tail() {
+void var_declaration_tail() // 4.2 - var-declaration-tail -> ; | [ NUM ] ;
+{
     if (currentToken.type == SEMICOLON) {
         match(SEMICOLON);
-    } else if (currentToken.type == LBRACKET) {
+    } else if (currentToken.type == LBRACKET) { // THIS IS IF ITS AN ARRAY
         match(LBRACKET);
         match(NUM);
         match(RBRACKET);
@@ -184,17 +192,22 @@ void var_declaration_tail() {
     }
 }
 
-void type_specifier() {
+enumType type_specifier() // 5 - type-specifier -> int | float
+{
     if (currentToken.type == INT) {
         match(INT);
+        return typeInt;
     } else if (currentToken.type == FLOAT) {
         match(FLOAT);
+        return typeFloat;
     } else {
         error("Expected 'int' or 'float' keyword");
+        exit(0);
     }
 }
 
-void params() {
+void params() // 7 - params -> param-list | void
+{
     if (currentToken.type == VOID) {
         match(VOID);
     } else {
@@ -202,12 +215,14 @@ void params() {
     }
 }
 
-void param_list() {
+void param_list() // 8.1 - param-list -> param param-list-tail
+{
     param();
     param_list_tail();
 }
 
-void param_list_tail() {
+void param_list_tail() // 8.2 - param-list-tail -> , param param-list-tail | ε
+{
     if (currentToken.type == COMMA) {
         match(COMMA);
         param();
@@ -215,39 +230,44 @@ void param_list_tail() {
     }
 }
 
-void param() {
-    type_specifier();
+void param() // 9.1 - param -> type-specifier ID param-tail
+{
+    // get type of variable
+    enumType variabletype;
+    variabletype = type_specifier();
+
+    string variablename  = currentToken.value;
+    declareVariable(variablename, variabletype, "", currentToken.line);
     match(ID);
+    
     param_tail();
 }
 
-void param_tail() {
-    if (currentToken.type == LBRACKET) {
+void param_tail() // 9.2 - param-tail -> ε | [ ] 
+{
+    if (currentToken.type == LBRACKET) { // THIS IS IF ITS AN ARRAY
         match(LBRACKET);
         match(RBRACKET);
     }
 }
 
-void compound_stmt() {
+void compound_stmt() // 10 - compound-stmt -> {statement-list}
+{
     match(LBRACE);
     statement_list();
     match(RBRACE);
 }
 
-// statement-list -> empty statement-list-tail 
-// statement-list-tail -> statement statement-list-tail | ε
-void statement_list() {
-    // while (currentToken.type == ID || currentToken.type == LBRACE ||
-    //     currentToken.type == IF || currentToken.type == WHILE) {
-    //     statement();
-    // }
+void statement_list() // 12.1 - statement-list -> empty statement-list-tail 
+{
     if (currentToken.type == ID || currentToken.type == LBRACE ||
         currentToken.type == IF || currentToken.type == WHILE) {
         statement_list_tail();
     }
 }
 
-void statement_list_tail() {
+void statement_list_tail() // 12.2 - statement-list-tail -> statement statement-list-tail | ε
+{
     if (currentToken.type == ID || currentToken.type == LBRACE ||
         currentToken.type == IF || currentToken.type == WHILE) {
         statement();
@@ -255,7 +275,8 @@ void statement_list_tail() {
     }
 }
 
-void statement() {
+void statement() // 13 - statement -> assignment-stmt | compound-stmt | selection-stmt | iteration-stmt
+{
     if (currentToken.type == ID) {
         assignment_stmt();
     } else if (currentToken.type == LBRACE) {
@@ -269,13 +290,20 @@ void statement() {
     }
 }
 
-void assignment_stmt() {
-    var();
+void assignment_stmt() // 18 - assignment-stmt -> var = expression
+{    
+    Symbol varSymbol;
+    varSymbol = var();
+
     match(ASSIGN);
-    expression();
+
+    varSymbol = expression();
+
+    symbolTable[varSymbol.name].value = varSymbol.value;
 }
 
-void selection_stmt() {
+void selection_stmt() // 15.1 - selection-stmt -> if ( expression ) statement selection-stmt-tail
+{
     match(IF);
     match(LPAREN);
     expression();
@@ -284,14 +312,16 @@ void selection_stmt() {
     selection_stmt_tail();
 }
 
-void selection_stmt_tail() {
+void selection_stmt_tail() // 15.2 - selection-stmt-tail -> else statement | ε
+{
     if (currentToken.type == ELSE) {
         match(ELSE);
         statement();
     }
 }
 
-void iteration_stmt() {
+void iteration_stmt() // 16 - iteration-stmt -> while ( expression ) statement
+{
     match(WHILE);
     match(LPAREN);
     expression();
@@ -299,14 +329,19 @@ void iteration_stmt() {
     statement();
 }
 
-// wasalt here
-
-void var() {
+Symbol var() // 19.1 - var -> ID var-tail
+{
+    string varName = currentToken.value;
+    Symbol varSymbol;
+    varSymbol = getVariable(varName, currentToken.line);
     match(ID);
     var_tail();
+    return varSymbol;
+
 }
 
-void var_tail() {
+void var_tail() // 19.2 - var-tail -> [ expression ] | ε
+{
     if (currentToken.type == LBRACKET) {
         match(LBRACKET);
         expression();
@@ -314,21 +349,120 @@ void var_tail() {
     }
 }
 
-void expression() {
-    additive_expression();
-    expression_tail();
+Symbol expression() // 20.1 - expression -> additive-expression expression-tail
+{
+    /*
+    //Declare local variable that will be used as parameters ("type" synthesized attributes) of the term function
+    string left_type, right_type;
+
+    //Declare local variable that will be used as parameters ("val" synthesized attributes) of the term function
+    int left_val, right_val;
+    
+    string temp; // variable to keep the name of the temporary variable
+
+    // The BNF of expr is converted to EBNF to avoid the left recursion
+    term(left_type, left_val); //term() will return type and value of term
+
+    // This loop is the check the types of the operands and evaluate the expression
+    while (token == PLUS) {
+        match(PLUS);
+        term(right_type, right_val);
+        
+        // Check left and right operands types
+        if (right_type != left_type)
+            semantic_err("Operand are not the same type");
+        
+        // Compute the left and right operands and put the results in the variable left_val used to accumulate the results
+        left_val = left_val + right_val;
+    };
+
+    exp_typ = left_type;
+    val = left_val;
+    */
+    
+    Symbol term1;
+    Symbol result;
+
+    term1 = additive_expression();
+    result = expression_tail(term1);
+    return result;
 }
 
-void expression_tail() {
-    if (currentToken.type == LT || currentToken.type == LTE || currentToken.type == GT || 
-        currentToken.type == GTE || currentToken.type == EQ || currentToken.type == NEQ) {
+Symbol expression_tail(Symbol term1) // 20.2 - expression-tail -> relop additive-expression expression-tail | ε
+{
+    Symbol term2;
+    Symbol result;
+    if (currentToken.type == LT) {
         relop();
-        additive_expression();
-        expression_tail();
+        term2 = additive_expression(); 
+        if (stoi(term1.value) < stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }    
+        return expression_tail(result);
     }
+    else if (currentToken.type == LTE) {
+        relop();
+        term2 = additive_expression();
+        if (stoi(term1.value) <= stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }     
+        return expression_tail(result);    
+    }
+    else if (currentToken.type == GT) {
+        relop();
+        term2 = additive_expression();
+        if (stoi(term1.value) > stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }    
+        return expression_tail(result);
+    }
+    else if (currentToken.type == GTE) {
+        relop();
+        term2 = additive_expression();
+        if (stoi(term1.value) >= stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }     
+        return expression_tail(result);
+    }
+    else if (currentToken.type == EQ) {
+        relop();
+        term2 = additive_expression();
+        if (stoi(term1.value) == stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }   
+        return expression_tail(result);
+    }
+    else if (currentToken.type == NEQ) {
+        relop();
+        term2 = additive_expression();
+        if (stoi(term1.value) != stoi(term2.value)) {
+            result.value = "1";
+        }
+        else {
+            result.value = "0";
+        }    
+        return expression_tail(result);
+    }
+    return result;
 }
 
-void relop() {
+void relop() // 21 - relop -> <= | < | > | >= | == | !=
+{
     if (currentToken.type == LT) {
         match(LT);
     }
@@ -347,20 +481,50 @@ void relop() {
     }
 }
 
-void additive_expression() {
-    term();
-    additive_expression_tail();
+Symbol additive_expression() // 22.1 - additive-expression -> term additive-expression-tail
+{
+    Symbol term1;
+    Symbol result;
+    term1 = term();
+    result = additive_expression_tail(term1);
+
+    return result;
 }
 
-void additive_expression_tail() {
-    if (currentToken.type == PLUS || currentToken.type == MINUS) {
+Symbol additive_expression_tail(Symbol term1) // 22.2 - additive-expression-tail -> addop term additive-expression-tail | ε
+{
+    Symbol term2;
+    Symbol result;
+
+    if (currentToken.type == PLUS) {
         addop();
-        term();
-        additive_expression_tail();
+        term2 = term();
+        if ((term1.type == typeInt) && (term2.type == typeInt))
+            result.value = to_string(stoi(term1.value) + stoi(term2.value)); 
+        else
+            result.value = to_string(stof(term1.value) + stof(term2.value)); 
+        
+        result = additive_expression_tail(result);
+        return result;
     }
+    else if (currentToken.type == MINUS) {
+        addop();
+        term2 = term();
+        if ((term1.type == typeInt) && (term2.type == typeInt))
+            result.value = to_string(stoi(term1.value) - stoi(term2.value)); 
+        else
+            result.value = to_string(stof(term1.value) - stof(term2.value)); 
+            
+        result = additive_expression_tail(result);
+        return result;
+    }
+
+    result.value = "0";
+    return result;
 }
 
-void addop() {
+void addop() // 23 - addop -> +|-
+{
     if (currentToken.type == PLUS) {
         match(PLUS);
     } else if (currentToken.type == MINUS) {
@@ -370,21 +534,47 @@ void addop() {
     }
 }
 
-void term() {
-    factor();
-    term_tail();
+Symbol term() // 24.1 - term -> factor term-tail
+{
+    Symbol factor1;
+    Symbol result;
+
+    factor1 = factor();
+    result = term_tail(factor1);
+
+    return result;
 }
 
-
-void term_tail() {
+Symbol term_tail(Symbol term) // 24.2 - term-tail -> mulop factor term-tail | ε 
+{
+    Symbol result;
     if (currentToken.type == MUL || currentToken.type == DIV) {
-        mulop();
-        factor();
-        term_tail();
+        if (currentToken.type == MUL) {
+            mulop();
+            Symbol value = factor();
+            if ((term.type == typeInt) && (value.type == typeInt))
+                result.value = to_string(stoi(term.value) * stoi(value.value)); 
+            else
+                result.value = to_string(stof(term.value) * stof(value.value)); 
+        } else if (currentToken.type == DIV) {
+            mulop();
+            Symbol value = factor();
+            if ((term.type == typeInt) && (value.type == typeInt))
+                result.value = to_string(stoi(term.value) / stoi(value.value)); 
+            else
+                result.value = to_string(stof(term.value) / stof(value.value));
+        } else {
+            error("Expected '*' or '/' operator");
+            exit(0);
+        }
+
+        result = term_tail(result);
     }
+    return result;
 }
 
-void mulop() {
+void mulop() // 25. mulop -> * | /
+{
     if (currentToken.type == MUL) {
         match(MUL);
     } else if (currentToken.type == DIV) {
@@ -394,43 +584,50 @@ void mulop() {
     }
 }
 
-void factor() {
+Symbol factor() // 26. factor -> ( expression ) | var | NUM
+{
+    Symbol result;
     if (currentToken.type == LPAREN) {
         match(LPAREN);
-        expression();
+        result = expression();
         match(RPAREN);
     } else if (currentToken.type == ID) {
-        var();
+        result = var();
     } else if (currentToken.type == NUM) {
+        result.name = "";
+        result.value = currentToken.value;
+        if (currentToken.type == ID)
+            result.type = typeInt;
+        else
+            result.type = typeFloat;
         match(NUM);
     } else {
         error("Expected '(', ID, or NUM");
     }
+    
+    return result;
 }
+
+// ------------------------------- ^^^ RULES ^^^ ----------------------------------------
+
 
 int main() {
     
-    // yylex();
-
-    // debugging
-    // for (size_t i = 0; i < tokens.size(); i++) {
-    //     cout << "Token: " << tokenTypeNames[tokens[i].type]
-    //          << ", Value: '" << tokens[i].value
-    //          << "', Line: " << tokens[i].line << endl;
-    // }
-
-    
     currentToken = getToken(); // Initialize the first token
-    // printf("current token: %s\n", tokenTypeNames[currentToken.type]);
 
     if (currentToken.type == UNKNOWN) {
         cerr << "Error: lexer couldn't initialize properly!" << endl;
         return 1;
     }
 
+    cout << "=== Running Parser + Interpreter ===\n";
     program(); // Start parsing
-
     cout << "Parsing completed successfully!" << endl;
+
+    cout << "=== Final Symbol Table ===\n";
+    for (const auto& entry : symbolTable) {
+        cout << entry.first << " = " << entry.second.value << " (type: " << entry.second.type << ")\n";
+    }
 
     return 0;
 }
