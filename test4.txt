@@ -1,0 +1,22 @@
+Program programWithLexicalErr {
+    /* Declaration List */
+    int x;
+    float y;
+
+    /* Statement List */
+    x = 23e+sds
+    y = 3.14
+
+    /* Invalid assignment due to missing operator */
+    x 5
+
+    if (x < 100) {
+        x = x + 1
+    } else {
+        x = x - 1
+    }
+
+    while (x <= 200) {
+        x = x + 10
+    }
+}.
