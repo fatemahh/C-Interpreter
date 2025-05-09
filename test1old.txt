@@ -11,4 +11,14 @@ Program validProgram {
 
     z[1] = 3 + 5
     z[2] = x + x
+
+    if (x < 100) {
+        x = x + 1
+    } else {
+        x = x - 1
+    }
+
+    while (x <= 200) {
+        x = x + 10
+    }
 }.
