@@ -301,16 +301,14 @@ void statement_list_tail() // 10.2 - statement-list-tail -> statement statement-
 void statement() // 11 - statement -> assignment-stmt | compound-stmt | selection-stmt | iteration-stmt
 {
     if (executeIf == false) {
-        // Consume the statement but don't execute it
         if (currentToken.type == ID) {
-            // consume: ID = expression (don't assign)
             Symbol dummy = var();
             match(ASSIGN);
-            expression(); // discard result
+            expression(); 
         } else if (currentToken.type == LBRACE) {
             match(LBRACE);
             while (currentToken.type != RBRACE) {
-                statement();  // recursively skip nested statements
+                statement(); 
             }
             match(RBRACE);
         } else if (currentToken.type == IF) {
@@ -488,7 +486,7 @@ Symbol expression_tail(Symbol term1) { // 16.2 - expression-tail -> relop additi
         result.name = "";
         return expression_tail(result);
     }
-    // ε-case: no comparison, just propagate the original term
+    // ε-case: no comparison
     return term1;
 }
 
@@ -528,8 +526,8 @@ Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-ta
 
     if (currentToken.type == PLUS) {
         int opLine = currentToken.line;
-        addop();                // consume '+'
-        term2 = term();         // parse RHS
+        addop();               
+        term2 = term();    
 
         if (term1.type == typeInt && term2.type == typeInt) {
             result.value = to_string(stoi(term1.value) + stoi(term2.value));
@@ -553,8 +551,8 @@ Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-ta
     }
     else if (currentToken.type == MINUS) {
         int opLine = currentToken.line;
-        addop();                // consume '-'
-        term2 = term();         // parse RHS
+        addop();               
+        term2 = term();     
 
         if (term1.type == typeInt && term2.type == typeInt) {
             result.value = to_string(stoi(term1.value) - stoi(term2.value));
@@ -577,7 +575,7 @@ Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-ta
         return additive_expression_tail(result);
     }
 
-    // ε-case: no more '+' or '-'
+    // ε-case: no more + or -
     return term1;
 }
 
@@ -609,11 +607,10 @@ Symbol term_tail(Symbol term) { // 20.2 - term-tail -> mulop factor term-tail | 
         TokenType op = currentToken.type;
         int opLine = currentToken.line;
         // match(op);
-        mulop(); // consume '*' or '/'
+        mulop(); 
         Symbol rhs = factor();
 
         Symbol result;
-        // compute result.value & result.type
         if (op == MUL) {
             if (term.type == typeInt && rhs.type == typeInt) {
                 result.value = to_string(stoi(term.value) * stoi(rhs.value));
