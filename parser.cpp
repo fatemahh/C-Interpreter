@@ -472,9 +472,9 @@ Symbol expression_tail(Symbol term1) { // 16.2 - expression-tail -> relop additi
         int lhs = stoi(term1.value), rhs = stoi(term2.value);
 
         switch (op) {
-            case LT:  cond = lhs <  rhs; break;
+            case LT:  cond = lhs < hs; break;
             case LTE: cond = lhs <= rhs; break;
-            case GT:  cond = lhs >  rhs; break;
+            case GT:  cond = lhs > rhs; break;
             case GTE: cond = lhs >= rhs; break;
             case EQ:  cond = lhs == rhs; break;
             case NEQ: cond = lhs != rhs; break;
@@ -484,8 +484,8 @@ Symbol expression_tail(Symbol term1) { // 16.2 - expression-tail -> relop additi
         executeIf = cond;
         Symbol result;
         result.value = cond ? "1" : "0";
-        result.type  = typeInt;
-        result.name  = "";
+        result.type = typeInt;
+        result.name = "";
         return expression_tail(result);
     }
     // ε-case: no comparison, just propagate the original term
@@ -533,11 +533,11 @@ Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-ta
 
         if (term1.type == typeInt && term2.type == typeInt) {
             result.value = to_string(stoi(term1.value) + stoi(term2.value));
-            result.type  = typeInt;
+            result.type = typeInt;
         }
         else if (term1.type == typeFloat && term2.type == typeFloat) {
             result.value = to_string(stof(term1.value) + stof(term2.value));
-            result.type  = typeFloat;
+            result.type = typeFloat;
         }
         else {
             semantic_error(opLine,
@@ -558,11 +558,11 @@ Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-ta
 
         if (term1.type == typeInt && term2.type == typeInt) {
             result.value = to_string(stoi(term1.value) - stoi(term2.value));
-            result.type  = typeInt;
+            result.type = typeInt;
         }
         else if (term1.type == typeFloat && term2.type == typeFloat) {
             result.value = to_string(stof(term1.value) - stof(term2.value));
-            result.type  = typeFloat;
+            result.type = typeFloat;
         }
         else {
             semantic_error(opLine,
@@ -617,10 +617,10 @@ Symbol term_tail(Symbol term) { // 20.2 - term-tail -> mulop factor term-tail | 
         if (op == MUL) {
             if (term.type == typeInt && rhs.type == typeInt) {
                 result.value = to_string(stoi(term.value) * stoi(rhs.value));
-                result.type  = typeInt;
+                result.type = typeInt;
             } else if (term.type == typeFloat && rhs.type == typeFloat) {
                 result.value = to_string(stof(term.value) * stof(rhs.value));
-                result.type  = typeFloat;
+                result.type = typeFloat;
             }
             else {
                 semantic_error(opLine,
@@ -636,13 +636,13 @@ Symbol term_tail(Symbol term) { // 20.2 - term-tail -> mulop factor term-tail | 
                     semantic_error(opLine, "division by zero");
                 }
                 result.value = to_string(stoi(term.value) / stoi(rhs.value));
-                result.type  = typeInt;
+                result.type = typeInt;
             } else if (term.type == typeFloat && rhs.type == typeFloat) {
                 if (stof(rhs.value) == 0) {
                     semantic_error(opLine, "division by zero");
                 }
                 result.value = to_string(stof(term.value) / stof(rhs.value));
-                result.type  = typeFloat;
+                result.type = typeFloat;
             }
             else {
                 semantic_error(opLine,
