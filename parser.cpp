@@ -8,6 +8,7 @@ extern "C" int yylex();
 extern char* yytext;      // yytext contains the current token's string value
 extern int yylineno;      // yylineno contains the line number of the current token
 
+bool executeIf;
 
 const char* tokenTypeNames[] = {
     "PROGRAM", "INT", "FLOAT", "IF", "ELSE", "WHILE", "VOID", 
@@ -44,11 +45,6 @@ struct Symbol {
     vector<string> values;
     int lineDeclared;
     int lastIndex = -1; // this will hold the index for when var_tail sees `[expr]`
-};
-
-struct LValue {
-  Symbol* sym;    // pointer into symbolTable
-  int     index;  // –1 if scalar, or the array index   
 };
 
 unordered_map<string, Symbol> symbolTable;
@@ -277,9 +273,12 @@ void param_tail() // 8.2 - param-tail -> ε | [ ]
 
 void compound_stmt() // 9 - compound-stmt -> {statement-list}
 {
-    match(LBRACE);
-    statement_list();
-    match(RBRACE);
+    if (executeIf == true)
+    {
+        match(LBRACE);
+        statement_list();
+        match(RBRACE);
+    }
 }
 
 void statement_list() // 10.1 - statement-list -> empty statement-list-tail 
@@ -301,52 +300,93 @@ void statement_list_tail() // 10.2 - statement-list-tail -> statement statement-
 
 void statement() // 11 - statement -> assignment-stmt | compound-stmt | selection-stmt | iteration-stmt
 {
-    if (currentToken.type == ID) {
-        assignment_stmt();
-    } else if (currentToken.type == LBRACE) {
-        compound_stmt();
-    } else if (currentToken.type == IF) {
-        selection_stmt();
-    } else if (currentToken.type == WHILE) {
-        iteration_stmt();
-    } else {
-        error("Expected statement (ID, '{', 'if', or 'while')");
+    if (executeIf == false) {
+        // Consume the statement but don't execute it
+        if (currentToken.type == ID) {
+            // consume: ID = expression (don't assign)
+            Symbol dummy = var();
+            match(ASSIGN);
+            expression(); // discard result
+        } else if (currentToken.type == LBRACE) {
+            match(LBRACE);
+            while (currentToken.type != RBRACE) {
+                statement();  // recursively skip nested statements
+            }
+            match(RBRACE);
+        } else if (currentToken.type == IF) {
+            selection_stmt();
+        } else if (currentToken.type == WHILE) {
+            iteration_stmt();  // this will skip execution
+        } else {
+            error("Expected statement (ID, '{', 'if', or 'while')");
+        }
+        return;
+    }
+    
+    if (executeIf == true) {
+        if (currentToken.type == ID) {
+            assignment_stmt();
+        } else if (currentToken.type == LBRACE) {
+            compound_stmt();
+        } else if (currentToken.type == IF) {
+            selection_stmt();
+        } else if (currentToken.type == WHILE) {
+            iteration_stmt();
+        } else {
+            error("Expected statement (ID, '{', 'if', or 'while')");
+        }
     }
 }
 
 // CHANGED
 void assignment_stmt() // 14 - assignment-stmt -> var = expression
-{    
-    Symbol lhs = var();
-    int opLine = currentToken.line;
-    match(ASSIGN);
-    Symbol rhs = expression();
+{   
+    if (executeIf == true)
+    { 
+        Symbol lhs = var();
+        int opLine = currentToken.line;
+        match(ASSIGN);
+        Symbol rhs = expression();
 
-    if (lhs.type != rhs.type) {
-        semantic_error(opLine,
-            "cannot assign " +
-            string(rhs.type==typeInt?"int":"float") +
-            " to " +
-            string(lhs.type==typeInt?"int":"float") +
-            " variable '" + lhs.name + "'");
-    }
+        if (lhs.type != rhs.type) {
+            semantic_error(opLine,
+                "cannot assign " +
+                string(rhs.type==typeInt?"int":"float") +
+                " to " +
+                string(lhs.type==typeInt?"int":"float") +
+                " variable '" + lhs.name + "'");
+        }
 
-    auto &entry = symbolTable[lhs.name];
-    if (lhs.lastIndex < 0) {
-        entry.value = rhs.value;
-    } else {
-        entry.values[lhs.lastIndex] = rhs.value;
+        auto &entry = symbolTable[lhs.name];
+        if (lhs.lastIndex < 0) {
+            entry.value = rhs.value;
+        } else {
+            entry.values[lhs.lastIndex] = rhs.value;
+        }
     }
 }
 
 void selection_stmt() // 12.1 - selection-stmt -> if ( expression ) statement selection-stmt-tail
 {
-    match(IF);
-    match(LPAREN);
-    expression();
-    match(RPAREN);
-    statement();
-    selection_stmt_tail();
+    if (executeIf == true)
+    { 
+        match(IF);
+        match(LPAREN);
+        expression();
+        match(RPAREN);
+        if (executeIf == true)
+        {
+            statement();
+            executeIf = false;
+            selection_stmt_tail();
+        }
+        else {
+            executeIf = false;
+            statement();
+            executeIf = true;
+            selection_stmt_tail();
+        }
+    }
 }
 
 void selection_stmt_tail() // 12.2 - selection-stmt-tail -> else statement | ε
@@ -359,11 +399,14 @@ void selection_stmt_tail() // 12.2 - selection-stmt-tail -> else statement | ε
 
 void iteration_stmt() // 13 - iteration-stmt -> while ( expression ) statement
 {
-    match(WHILE);
-    match(LPAREN);
-    expression();
-    match(RPAREN);
-    statement();
+    if (executeIf == true)
+    {
+        match(WHILE);
+        match(LPAREN);
+        expression();
+        match(RPAREN);
+        statement();
+    }
 }
 
 Symbol var() // 15.1 - var -> ID var-tail
@@ -438,6 +481,7 @@ Symbol expression_tail(Symbol term1) { // 16.2 - expression-tail -> relop additi
             default:  cond = false; break;
         }
         
+        executeIf = cond;
         Symbol result;
         result.value = cond ? "1" : "0";
         result.type  = typeInt;
@@ -660,6 +704,8 @@ Symbol factor() // 22. factor -> ( expression ) | var | NUM
 
 int main() {
     
+    executeIf = true;
+
     currentToken = getToken(); // Initialize the first token
 
     if (currentToken.type == UNKNOWN) {

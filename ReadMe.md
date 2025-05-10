@@ -42,6 +42,7 @@ You can run the program via WSL using the following commands:
 flex scanner.l
 gcc -c lex.yy.c -o lex.yy.o
 g++ parser.cpp lex.yy.o -lfl -o parser
+dos2unix test1.txt
 ./parser < test1.txt
 ```
 

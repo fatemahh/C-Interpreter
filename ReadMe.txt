@@ -39,4 +39,5 @@ Run using:
 flex scanner.l
 gcc -c lex.yy.c -o lex.yy.o
 g++ parser.cpp lex.yy.o -lfl -o parser
+dos2unix test.txt
 ./parser < test.txt

@@ -1,0 +1,19 @@
+Program IfExecution {
+    /* Declaration List */
+    int x;
+    float y;
+    int z[5];
+
+    /* Statement List */
+    x = 10
+    y = 3.14
+    z[0] = 3
+
+    if ( x == 9 ) z[0] = 3 + 5
+
+    if ( y >= 4.1 ) z[1] = x + x else z[1] = x
+
+    if ( x < 20 ) z[2] = 20
+
+
+}.
