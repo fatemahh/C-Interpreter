@@ -230,7 +230,7 @@ enumType type_specifier() // 5 - type-specifier -> int | float
     }
 }
 
-void params() // 7 - params -> param-list | void
+void params() // 6 - params -> param-list | void
 {
     if (currentToken.type == VOID) {
         match(VOID);
@@ -239,13 +239,13 @@ void params() // 7 - params -> param-list | void
     }
 }
 
-void param_list() // 8.1 - param-list -> param param-list-tail
+void param_list() // 7.1 - param-list -> param param-list-tail
 {
     param();
     param_list_tail();
 }
 
-void param_list_tail() // 8.2 - param-list-tail -> , param param-list-tail | ε
+void param_list_tail() // 7.2 - param-list-tail -> , param param-list-tail | ε
 {
     if (currentToken.type == COMMA) {
         match(COMMA);
@@ -254,7 +254,7 @@ void param_list_tail() // 8.2 - param-list-tail -> , param param-list-tail | ε
     }
 }
 
-void param() // 9.1 - param -> type-specifier ID param-tail
+void param() // 8.1 - param -> type-specifier ID param-tail
 {
     // get type of variable
     enumType variabletype;
@@ -267,7 +267,7 @@ void param() // 9.1 - param -> type-specifier ID param-tail
     param_tail();
 }
 
-void param_tail() // 9.2 - param-tail -> ε | [ ] 
+void param_tail() // 8.2 - param-tail -> ε | [ ] 
 {
     if (currentToken.type == LBRACKET) { // THIS IS IF ITS AN ARRAY
         match(LBRACKET);
@@ -275,14 +275,14 @@ void param_tail() // 9.2 - param-tail -> ε | [ ]
     }
 }
 
-void compound_stmt() // 10 - compound-stmt -> {statement-list}
+void compound_stmt() // 9 - compound-stmt -> {statement-list}
 {
     match(LBRACE);
     statement_list();
     match(RBRACE);
 }
 
-void statement_list() // 12.1 - statement-list -> empty statement-list-tail 
+void statement_list() // 10.1 - statement-list -> empty statement-list-tail 
 {
     if (currentToken.type == ID || currentToken.type == LBRACE ||
         currentToken.type == IF || currentToken.type == WHILE) {
@@ -290,7 +290,7 @@ void statement_list() // 12.1 - statement-list -> empty statement-list-tail
     }
 }
 
-void statement_list_tail() // 12.2 - statement-list-tail -> statement statement-list-tail | ε
+void statement_list_tail() // 10.2 - statement-list-tail -> statement statement-list-tail | ε
 {
     if (currentToken.type == ID || currentToken.type == LBRACE ||
         currentToken.type == IF || currentToken.type == WHILE) {
@@ -299,7 +299,7 @@ void statement_list_tail() // 12.2 - statement-list-tail -> statement statement-
     }
 }
 
-void statement() // 13 - statement -> assignment-stmt | compound-stmt | selection-stmt | iteration-stmt
+void statement() // 11 - statement -> assignment-stmt | compound-stmt | selection-stmt | iteration-stmt
 {
     if (currentToken.type == ID) {
         assignment_stmt();
@@ -315,7 +315,7 @@ void statement() // 13 - statement -> assignment-stmt | compound-stmt | selectio
 }
 
 // CHANGED
-void assignment_stmt() // 18 - assignment-stmt -> var = expression
+void assignment_stmt() // 14 - assignment-stmt -> var = expression
 {    
     Symbol lhs = var();
     int opLine = currentToken.line;
@@ -339,7 +339,7 @@ void assignment_stmt() // 18 - assignment-stmt -> var = expression
     }
 }
 
-void selection_stmt() // 15.1 - selection-stmt -> if ( expression ) statement selection-stmt-tail
+void selection_stmt() // 12.1 - selection-stmt -> if ( expression ) statement selection-stmt-tail
 {
     match(IF);
     match(LPAREN);
@@ -349,7 +349,7 @@ void selection_stmt() // 15.1 - selection-stmt -> if ( expression ) statement se
     selection_stmt_tail();
 }
 
-void selection_stmt_tail() // 15.2 - selection-stmt-tail -> else statement | ε
+void selection_stmt_tail() // 12.2 - selection-stmt-tail -> else statement | ε
 {
     if (currentToken.type == ELSE) {
         match(ELSE);
@@ -357,7 +357,7 @@ void selection_stmt_tail() // 15.2 - selection-stmt-tail -> else statement | ε
     }
 }
 
-void iteration_stmt() // 16 - iteration-stmt -> while ( expression ) statement
+void iteration_stmt() // 13 - iteration-stmt -> while ( expression ) statement
 {
     match(WHILE);
     match(LPAREN);
@@ -366,7 +366,7 @@ void iteration_stmt() // 16 - iteration-stmt -> while ( expression ) statement
     statement();
 }
 
-Symbol var() // 19.1 - var -> ID var-tail
+Symbol var() // 15.1 - var -> ID var-tail
 {
     string varName = currentToken.value;
     Symbol varSymbol = getVariable(varName, currentToken.line);
@@ -377,7 +377,7 @@ Symbol var() // 19.1 - var -> ID var-tail
 
 }
 
-void var_tail(Symbol& sym) // 19.2 - var-tail -> [ expression ] | ε
+void var_tail(Symbol& sym) // 15.2 - var-tail -> [ expression ] | ε
 {
     if (currentToken.type == LBRACKET) {
         match(LBRACKET);
@@ -398,7 +398,7 @@ void var_tail(Symbol& sym) // 19.2 - var-tail -> [ expression ] | ε
     }
 }
 
-Symbol expression() // 20.1 - expression -> additive-expression expression-tail
+Symbol expression() // 16.1 - expression -> additive-expression expression-tail
 {
     Symbol term1;
     Symbol result;
@@ -408,7 +408,7 @@ Symbol expression() // 20.1 - expression -> additive-expression expression-tail
     return result;
 }
 
-Symbol expression_tail(Symbol term1) { // 20.2 - expression-tail -> relop additive-expression expression-tail | ε
+Symbol expression_tail(Symbol term1) { // 16.2 - expression-tail -> relop additive-expression expression-tail | ε
     if ( currentToken.type == LT
         || currentToken.type == LTE
         || currentToken.type == GT
@@ -449,7 +449,7 @@ Symbol expression_tail(Symbol term1) { // 20.2 - expression-tail -> relop additi
 }
 
 
-void relop() // 21 - relop -> <= | < | > | >= | == | !=
+void relop() // 17 - relop -> <= | < | > | >= | == | !=
 {
     if (currentToken.type == LT) {
         match(LT);
@@ -469,7 +469,7 @@ void relop() // 21 - relop -> <= | < | > | >= | == | !=
     }
 }
 
-Symbol additive_expression() // 22.1 - additive-expression -> term additive-expression-tail
+Symbol additive_expression() // 18.1 - additive-expression -> term additive-expression-tail
 {
     Symbol term1;
     Symbol result;
@@ -479,7 +479,7 @@ Symbol additive_expression() // 22.1 - additive-expression -> term additive-expr
     return result;
 }
 
-Symbol additive_expression_tail(Symbol term1) {
+Symbol additive_expression_tail(Symbol term1) { // 18.2 - additive-expression-tail -> addop term additive-expression-tail | ε
     Symbol term2, result;
 
     if (currentToken.type == PLUS) {
@@ -538,7 +538,7 @@ Symbol additive_expression_tail(Symbol term1) {
 }
 
 
-void addop() // 23 - addop -> +|-
+void addop() // 19 - addop -> +|-
 {
     if (currentToken.type == PLUS) {
         match(PLUS);
@@ -549,7 +549,7 @@ void addop() // 23 - addop -> +|-
     }
 }
 
-Symbol term() // 24.1 - term -> factor term-tail
+Symbol term() // 20.1 - term -> factor term-tail
 {
     Symbol factor1;
     Symbol result;
@@ -560,7 +560,7 @@ Symbol term() // 24.1 - term -> factor term-tail
     return result;
 }
 
-Symbol term_tail(Symbol term) { // 24.2 - term-tail -> mulop factor term-tail | ε 
+Symbol term_tail(Symbol term) { // 20.2 - term-tail -> mulop factor term-tail | ε 
     if (currentToken.type == MUL || currentToken.type == DIV) {
         TokenType op = currentToken.type;
         int opLine = currentToken.line;
@@ -616,7 +616,7 @@ Symbol term_tail(Symbol term) { // 24.2 - term-tail -> mulop factor term-tail | 
     return term;
 }
 
-void mulop() // 25. mulop -> * | /
+void mulop() // 21. mulop -> * | /
 {
     if (currentToken.type == MUL) {
         match(MUL);
@@ -627,7 +627,7 @@ void mulop() // 25. mulop -> * | /
     }
 }
 
-Symbol factor() // 26. factor -> ( expression ) | var | NUM
+Symbol factor() // 22. factor -> ( expression ) | var | NUM
 {
     Symbol result;
     if (currentToken.type == LPAREN) {

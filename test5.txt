@@ -1,12 +1,11 @@
-Program invalidAlreadyDeclared {
+Program invalidVarNotArr {
     /* Declaration List */
     int x;
     float y;
     int z[5];
-    int z;
 
     /* Statement List */
-    x = 10
+    x[0] = 8
     y = 3.14
     z[0] = 21
 

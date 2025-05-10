@@ -1,4 +1,4 @@
-Program validProgram {
+Program invalidOutOfBounds {
     /* Declaration List */
     int x;
     float y;
@@ -8,17 +8,8 @@ Program validProgram {
     x = 10
     y = 3.14
     z[0] = 21
+    z[22] = 8
 
     z[1] = 3 + 5
     z[2] = x + x
-
-    if (x < 100) {
-        x = x + 1
-    } else {
-        x = x - 1
-    }
-
-    while (x <= 200) {
-        x = x + 10
-    }
 }.

@@ -1,9 +1,8 @@
-Program invalidAlreadyDeclared {
+Program ivalidDivBy0 {
     /* Declaration List */
     int x;
     float y;
     int z[5];
-    int z;
 
     /* Statement List */
     x = 10
@@ -11,5 +10,5 @@ Program invalidAlreadyDeclared {
     z[0] = 21
 
     z[1] = 3 + 5
-    z[2] = x + x
+    z[2] = x / 0
 }.
